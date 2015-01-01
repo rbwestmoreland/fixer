@@ -28,8 +28,8 @@ namespace Fixer.Processes.Conditions.Services
             {
                 if (IsActive(processConfiguration, processState, condition))
                 {
-                    EventBus.Raise(new ProcessConditionMet(processConfiguration, processState, condition));
                     conditions.Add(condition);
+                    EventBus.Raise(new ProcessConditionMet(processConfiguration, processState, condition));
                 }
             }
 
@@ -68,32 +68,30 @@ namespace Fixer.Processes.Conditions.Services
         private void CheckCondition(IProcessConfiguration processConfiguration, IProcessState processState, ICondition condition)
         {
             var specification = _processConditionSpecificationFactory.Create(condition);
-            var hasOccured = specification.IsSatisfiedBy(processState);
+            var occurred = specification.IsSatisfiedBy(processState);
 
-            _history.Add(new Check
-            {
-                ProcessConfigurationPath = processConfiguration.Path,
-                ProcessConditionDescription = condition.Decription,
-                Timestamp = DateTime.UtcNow,
-                Occured = hasOccured
-            });
+            AddToHistory(processConfiguration, condition, occurred);
 
-            var maxToKeep = condition.Ratio.ElementAt(1);
-            var toRemove = _history.Where(c => c.ProcessConfigurationPath.Equals(processConfiguration.Path))
-                .Where(c => c.ProcessConditionDescription.Equals(condition.Decription))
-                .OrderByDescending(c => c.Timestamp)
-                .ToArray()
-                .Skip(maxToKeep);
-
-            foreach (var item in toRemove)
-            {
-                _history.Remove(item);
-            }
+            var timestamp = DateTime.UtcNow;
+            var timesOccurred = FindTimesOccurred(processConfiguration, condition);
+            EventBus.Raise(new ProcessConditionChecked(processConfiguration, processState, condition, occurred, timesOccurred));
         }
 
         private bool HasOccurredEnough(IProcessConfiguration processConfiguration, ICondition condition)
         {
             var times = condition.Ratio.ElementAt(0);
+            var occurrences = FindTimesOccurred(processConfiguration, condition);
+
+            var hasOccuredEnough = occurrences >= times;
+
+            if (hasOccuredEnough)
+                ClearHistory(processConfiguration, condition);
+
+            return hasOccuredEnough;
+        }
+
+        private int FindTimesOccurred(IProcessConfiguration processConfiguration, ICondition condition)
+        {
             var window = condition.Ratio.ElementAt(1);
 
             var previousChecks = _history.Where(c => c.ProcessConfigurationPath.Equals(processConfiguration.Path))
@@ -103,15 +101,43 @@ namespace Fixer.Processes.Conditions.Services
                 .Take(window);
 
             var occurrences = previousChecks
-                .Where(c => c.Occured)
+                .Where(c => c.Occurred)
                 .Count();
 
-            var hasOccuredEnough = occurrences >= times;
+            return occurrences;
+        }
 
-            if (hasOccuredEnough)
-                _history.RemoveAll(c => c.ProcessConfigurationPath.Equals(processConfiguration.Path) && c.ProcessConditionDescription.Equals(condition.Decription));
+        private void AddToHistory(IProcessConfiguration processConfiguration, ICondition condition, bool occurred)
+        {
+            _history.Add(new Check
+            {
+                ProcessConfigurationPath = processConfiguration.Path,
+                ProcessConditionDescription = condition.Decription,
+                Timestamp = DateTime.UtcNow,
+                Occurred = occurred
+            });
 
-            return hasOccuredEnough;
+            TrimHistory(processConfiguration, condition);
+        }
+
+        private void TrimHistory(IProcessConfiguration processConfiguration, ICondition condition)
+        {
+            var maxChecksToKeep = condition.Ratio.ElementAt(1);
+            var checksToDiscard = _history.Where(c => c.ProcessConfigurationPath.Equals(processConfiguration.Path))
+                .Where(c => c.ProcessConditionDescription.Equals(condition.Decription))
+                .OrderByDescending(c => c.Timestamp)
+                .ToArray()
+                .Skip(maxChecksToKeep);
+
+            foreach (var check in checksToDiscard)
+            {
+                _history.Remove(check);
+            }
+        }
+
+        private void ClearHistory(IProcessConfiguration processConfiguration, ICondition condition)
+        {
+            _history.RemoveAll(c => c.ProcessConfigurationPath.Equals(processConfiguration.Path) && c.ProcessConditionDescription.Equals(condition.Decription));
         }
 
         private class Check
@@ -119,7 +145,7 @@ namespace Fixer.Processes.Conditions.Services
             public string ProcessConfigurationPath { get; set; }
             public string ProcessConditionDescription { get; set; }
             public DateTime Timestamp { get; set; }
-            public bool Occured { get; set; }
+            public bool Occurred { get; set; }
         }
     }
 }

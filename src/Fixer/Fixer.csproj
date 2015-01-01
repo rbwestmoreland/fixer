@@ -71,6 +71,7 @@
     <Compile Include="Events\Common\ExceptionThrown.cs" />
     <Compile Include="Events\EventBus.cs" />
     <Compile Include="Events\IEvent.cs" />
+    <Compile Include="Events\Processes\Conditions\ProcessConditionChecked.cs" />
     <Compile Include="Events\Processes\Conditions\ProcessConditionMet.cs" />
     <Compile Include="Events\Processes\Configurations\ProcessConfigurationLoadAfter.cs" />
     <Compile Include="Events\Processes\Configurations\ProcessConfigurationLoadBefore.cs" />

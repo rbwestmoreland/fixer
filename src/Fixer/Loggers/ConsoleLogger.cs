@@ -6,6 +6,7 @@ using Fixer.Events.Processes.Actions;
 using Fixer.Events.Processes.Conditions;
 using Fixer.Events.Processes.Configurations;
 using System;
+using System.Linq;
 
 namespace Fixer.Loggers
 {
@@ -28,10 +29,10 @@ namespace Fixer.Loggers
 
             if (message.Length > 59)
             {
-                message = message.Substring(0, 59);
+                message = message.Substring(0, 56) + "...";
             }
 
-            var output = string.Format("{0,-6} │ {1,-8} │ {2}", type, area, message);
+            var output = string.Format("{0,-6} │ {1,-7} │ {2}", type, area, message);
 
             Console.Write(output);
         }
@@ -104,7 +105,7 @@ namespace Fixer.Loggers
         {
             EventBus.Register<ProcessStartBefore>(e =>
             {
-                OutputLine("Info", "Process", "  └ Starting '{0}'", e.ProcessConfiguration.Description);
+                OutputLine("Info", "Process", "  └ starting '{0}'", e.ProcessConfiguration.Description);
             });
 
             EventBus.Register<ProcessStartAfter>(e =>
@@ -113,22 +114,38 @@ namespace Fixer.Loggers
 
             EventBus.Register<ProcessStopBefore>(e =>
             {
-                OutputLine("Info", "Process", "  └ Stopping '{0}'", e.ProcessConfiguration.Description);
+                OutputLine("Info", "Process", "  └ stopping '{0}'", e.ProcessConfiguration.Description);
             });
 
             EventBus.Register<ProcessStopAfter>(e =>
             {
             });
 
+            EventBus.Register<ProcessConditionChecked>(e =>
+            {
+                var timesRequiredToOccur = e.Condition.Ratio.ElementAt(0);
+                var window = e.Condition.Ratio.ElementAt(0);
+
+                if (e.Occurred)
+                {
+                    if (timesRequiredToOccur <= e.TimesOccurred)
+                        OutputLine("Info", "Process", "  └ condition: [√] '{0}'", e.Condition.Decription);
+                    else
+                        OutputLine("Info", "Process", "  └ condition: [*] '{0}' - {1} times, {2} required", e.Condition.Decription, e.TimesOccurred, timesRequiredToOccur);
+                }
+                else
+                    OutputLine("Info", "Process", "  └ condition: [ ] '{0}'", e.Condition.Decription);
+            });
+
             EventBus.Register<ProcessConditionMet>(e =>
             {
-                OutputLine("Info", "Process", "  └ condition '{0}' triggered '{1}'", e.Condition.Decription, e.Condition.Action);
+                OutputLine("Info", "Process", "    └ action '{1}' queued.", e.Condition.Decription, e.Condition.Action);
             });
 
             EventBus.Register<ProcessConfigurationLoadBefore>(e =>
             {
                 var path = e.Path.Length > 45 ? e.Path.Substring(e.Path.Length - 45, 45) : e.Path;
-                OutputLine("Info", "Process", "Loading... {0}", path);
+                OutputLine("Info", "Process", "loading... {0}", path);
             });
 
             EventBus.Register<ProcessConfigurationLoadAfter>(e =>

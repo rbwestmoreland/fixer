@@ -86,12 +86,10 @@ namespace Fixer.Applications
             {
                 var processState = _processStateRepository.GetState(processConfiguration);
                 var conditions = _processConditionService.FindActiveConditions(processConfiguration, processState);
+                var actions = conditions.Select(c => c.Action);
 
-                foreach (var condition in conditions)
-                {
-                    _processActionService.PerformAction(processConfiguration, condition.Action);
-                    _notificationService.NotifyContacts(applicationConfiguration, processConfiguration, processState, condition);
-                }
+                _processActionService.PerformActions(processConfiguration, actions);
+                conditions.ForEach(condition => _notificationService.NotifyContacts(applicationConfiguration, processConfiguration, processState, condition));
             }
 
             EventBus.Raise(new ApplicationPollAfter(this));

@@ -4,6 +4,7 @@ using Fixer.Events.Processes.Actions;
 using Fixer.Processes.Common;
 using Fixer.Processes.Configurations;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -22,6 +23,31 @@ namespace Fixer.Processes.Actions.Services
 
             if (string.Equals(action, "stop", StringComparison.OrdinalIgnoreCase))
                 Stop(processConfiguration);
+        }
+
+        public void PerformActions(IProcessConfiguration processConfiguration, IEnumerable<string> actions)
+        {
+            var hasStart = actions.Any(a => "start".Equals(a, StringComparison.OrdinalIgnoreCase));
+            var hasRestart = actions.Any(a => "restart".Equals(a, StringComparison.OrdinalIgnoreCase));
+            var hasStop = actions.Any(a => "stop".Equals(a, StringComparison.OrdinalIgnoreCase));
+
+            if (hasStop)
+            {
+                PerformAction(processConfiguration, "stop");
+                return;
+            }
+
+            if (hasRestart)
+            {
+                PerformAction(processConfiguration, "restart");
+                return;
+            }
+
+            if (hasStart)
+            {
+                PerformAction(processConfiguration, "start");
+                return;
+            }
         }
 
         private void Start(IProcessConfiguration processConfiguration)
