@@ -13,31 +13,41 @@ namespace Fixer.Loggers
     {
         public ConsoleLogger()
         {
+            Console.CursorVisible = false;
             ListenToCommonEvents();
             ListenToAppictionEvents();
             ListenToProcessEvents();
             ListenToNotificationEvents();
         }
 
-        private void Output(string type, string area, string messageFormat, params object[] args)
+        private void OutputLine(string type, string area, string messageFormat, params object[] args)
         {
+            Console.WriteLine();
+
             var message = string.Format(messageFormat, args);
 
-            if (message.Length > 50)
+            if (message.Length > 59)
             {
-                message = message.Substring(0, 50);
+                message = message.Substring(0, 59);
             }
 
-            var output = string.Format("{0,-9} │ {1,-9} │ {2}", type, area, message);
+            var output = string.Format("{0,-6} │ {1,-8} │ {2}", type, area, message);
 
-            Console.WriteLine(output);
+            Console.Write(output);
+        }
+
+        private void OutputDivider()
+        {
+            Console.WriteLine();
+            var output = new string('─', Console.WindowWidth - 1);
+            Console.Write(output);
         }
 
         private void ListenToCommonEvents()
         {
             EventBus.Register<ExceptionThrown>(e =>
             {
-                Output("Error", "global", e.Exception.Message);
+                OutputLine("Error", "global", e.Exception.Message);
             });
         }
 
@@ -45,42 +55,48 @@ namespace Fixer.Loggers
         {
             EventBus.Register<ApplicationConfigurationLoadBefore>(e =>
             {
-                Output("Info", "App", "Loading... {0} ", e.Path);
+                OutputLine("Info", "App", "Loading Application Configuration... ");
             });
 
             EventBus.Register<ApplicationConfigurationLoadAfter>(e =>
             {
-
+                if (e.ApplicationConfiguration == null)
+                {
+                    var path = e.Path.Length > 40 ? e.Path.Substring(e.Path.Length - 40, 40) : e.Path;
+                    OutputLine("Info", "App", "Error Loading... {0} ", path);
+                }
+                else
+                {
+                    Console.Write("success.");
+                }
             });
 
             EventBus.Register<ApplicationStartBefore>(e =>
             {
-                Output("Info", "App", "Starting...");
+                OutputLine("Info", "App", "Starting...");
             });
 
             EventBus.Register<ApplicationStartAfter>(e =>
             {
-                Output("Info", "App", "Started");
+                OutputDivider();
             });
 
             EventBus.Register<ApplicationStopBefore>(e =>
             {
-                Output("Info", "App", "Stopping...");
+                OutputLine("Info", "App", "Stopping...");
             });
 
             EventBus.Register<ApplicationStopAfter>(e =>
             {
-                Output("Info", "App", "Stopped");
             });
 
             EventBus.Register<ApplicationPollBefore>(e =>
             {
-                Output("Info", "App", "Polling...");
             });
 
             EventBus.Register<ApplicationPollAfter>(e =>
             {
-                Output("Info", "App", "Polling complete.");
+                OutputDivider();
             });
         }
 
@@ -88,7 +104,7 @@ namespace Fixer.Loggers
         {
             EventBus.Register<ProcessStartBefore>(e =>
             {
-                Output("Info", "Process", "Starting '{0}'", e.ProcessConfiguration.Description);
+                OutputLine("Info", "Process", "  └ Starting '{0}'", e.ProcessConfiguration.Description);
             });
 
             EventBus.Register<ProcessStartAfter>(e =>
@@ -97,7 +113,7 @@ namespace Fixer.Loggers
 
             EventBus.Register<ProcessStopBefore>(e =>
             {
-                Output("Info", "Process", "Stopping '{0}'", e.ProcessConfiguration.Description);
+                OutputLine("Info", "Process", "  └ Stopping '{0}'", e.ProcessConfiguration.Description);
             });
 
             EventBus.Register<ProcessStopAfter>(e =>
@@ -106,17 +122,19 @@ namespace Fixer.Loggers
 
             EventBus.Register<ProcessConditionMet>(e =>
             {
-                Output("Info", "Process", "Process '{0}' condition '{0}' triggered '{1}'", e.ProcessConfiguration.Description, e.Condition.Decription, e.Condition.Action);
+                OutputLine("Info", "Process", "  └ condition '{0}' triggered '{1}'", e.Condition.Decription, e.Condition.Action);
             });
 
             EventBus.Register<ProcessConfigurationLoadBefore>(e =>
             {
-                Output("Info", "Process", "Loading '{0}'", e.Path);
+                var path = e.Path.Length > 45 ? e.Path.Substring(e.Path.Length - 45, 45) : e.Path;
+                OutputLine("Info", "Process", "Loading... {0}", path);
             });
 
             EventBus.Register<ProcessConfigurationLoadAfter>(e =>
             {
-
+                if (e.ProcessConfiguration != null)
+                    OutputLine("Info", "Process", "└ {0}", e.ProcessConfiguration.Description);
             });
         }
 

@@ -1,6 +1,6 @@
 ﻿{
 
-    "description": "kings_hand_process",
+    "description": "example_process",
     "groups": [ "example" ],
 
     "start": {
@@ -39,6 +39,16 @@
             "interval": 5,
             "ratio": [ 3, 5 ],
             "action": "restart",
+            "contact": [ "bates", "developers" ]
+        },
+        {
+            "description": "high memory",
+            "script": {
+                "language": "javascript",
+                "source": "memory_usage > 1"
+            },
+            "interval": 5,
+            "ratio": [ 3, 5 ],
             "contact": [ "bates", "developers" ]
         }
     ]
